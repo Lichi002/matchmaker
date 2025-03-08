@@ -5,6 +5,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -22,11 +25,14 @@ export async function GET(
     }
 
     // 验证token
-    const decoded = verify(token.value, process.env.JWT_SECRET || 'your-secret-key') as { userId: string };
+    verify(token.value, process.env.JWT_SECRET || 'your-secret-key');
 
     // 获取用户信息
     const user = await prisma.user.findUnique({
       where: { id: params.id },
+      include: {
+        photos: true
+      }
     });
 
     if (!user) {
@@ -41,7 +47,7 @@ export async function GET(
 
     return NextResponse.json(profile);
   } catch (error) {
-    console.error('获取用户资料错误:', error);
+    console.error('获取用户资料失败:', error);
     return NextResponse.json(
       { error: '获取用户资料失败' },
       { status: 500 }

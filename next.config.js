@@ -1,23 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
   images: {
-    domains: ['alifile.sojump.cn'], // 允许加载问卷星的图片
+    domains: ['sssl8b0ty.hn-bkt.clouddn.com'],
   },
-  // 国际化配置
   i18n: {
     locales: ['zh'],
     defaultLocale: 'zh',
   },
-  // 添加服务器配置
-  server: {
-    // 允许从任何IP访问
-    host: '0.0.0.0',
-    // 默认端口
-    port: 3000,
+  webpack: (config) => {
+    config.externals = [...(config.externals || []), 'bcrypt'];
+    return config;
   },
-  // 添加输出配置
-  output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['bcrypt']
+  },
+  env: {
+    QINIU_ACCESS_KEY: process.env.QINIU_ACCESS_KEY,
+    QINIU_SECRET_KEY: process.env.QINIU_SECRET_KEY,
+    QINIU_BUCKET: process.env.QINIU_BUCKET,
+  },
 }
 
 module.exports = nextConfig 

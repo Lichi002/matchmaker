@@ -2,59 +2,150 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import PhotoUpload from '../components/PhotoUpload';
 
 interface UserProfile {
   id: string;
   name: string;
   email: string;
-  gender: string;
-  birthDate: string;
+  gender: string | null;
+  birthDate: string | null;
   birthPlace: string;
-  currentCity: string;
-  education: string;
+  currentCity: string | null;
+  education: string | null;
   carAndHouse: string;
   industry: string;
-  occupation: string;
-  annualIncome: string;
-  height: number;
-  weight: number;
-  personality: string;
-  hobbies: string;
+  occupation: string | null;
+  annualIncome: string | null;
+  height: number | null;
+  weight: number | null;
+  personality: string | null;
+  hobbies: string | null;
   mbti: string | null;
-  photos: string;
+  photos: string | null;
+}
+
+interface Photo {
+  id: string;
+  url: string;
+  caption: string | null;
+  isMain: boolean;
 }
 
 export default function Profile() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchProfile();
+    fetchPhotos();
   }, []);
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/user/profile');
+      const response = await fetch('/api/user/profile', {
+        credentials: 'include',
+      });
+
       if (!response.ok) {
         if (response.status === 401) {
-          // 未登录，重定向到登录页
           router.push('/login');
           return;
         }
         throw new Error('获取个人资料失败');
       }
+
       const data = await response.json();
       setProfile(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '获取个人资料失败');
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
+    } catch (error) {
+      console.error('获取个人资料失败:', error);
+      setError('获取个人资料失败，请重试');
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
+  const fetchPhotos = async () => {
+    try {
+      const response = await fetch('/api/user/photos', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('获取照片失败');
+      }
+
+      const data = await response.json();
+      setPhotos(data);
+    } catch (error) {
+      console.error('获取照片失败:', error);
+    }
+  };
+
+  const handlePhotoUpload = async (url: string, caption: string, isMain: boolean) => {
+    try {
+      const response = await fetch('/api/user/photos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ url, caption, isMain }),
+      });
+
+      if (!response.ok) {
+        throw new Error('保存照片失败');
+      }
+
+      const newPhoto = await response.json();
+      setPhotos(prev => [...prev, newPhoto]);
+    } catch (error) {
+      console.error('保存照片失败:', error);
+      throw error;
+    }
+  };
+
+  const handlePhotoDelete = async (photoId: string) => {
+    try {
+      const response = await fetch(`/api/user/photos?id=${photoId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('删除照片失败');
+      }
+
+      setPhotos(prev => prev.filter(photo => photo.id !== photoId));
+    } catch (error) {
+      console.error('删除照片失败:', error);
+    }
+  };
+
+  const handleSetMainPhoto = async (photoId: string) => {
+    try {
+      const response = await fetch(`/api/user/photos/${photoId}/main`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('设置主照片失败');
+      }
+
+      setPhotos(prev => prev.map(photo => ({
+        ...photo,
+        isMain: photo.id === photoId
+      })));
+    } catch (error) {
+      console.error('设置主照片失败:', error);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -69,18 +160,36 @@ export default function Profile() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-semibold text-red-600">{error}</div>
+          <button
+            onClick={fetchProfile}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            重试
+          </button>
         </div>
       </div>
     );
   }
 
   if (!profile) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-semibold text-gray-700">未找到个人资料</div>
+          <button
+            onClick={() => router.push('/profile/edit')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            完善个人资料
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const carAndHouseData = JSON.parse(profile.carAndHouse || '{}');
-  const hobbies = profile.hobbies.split(',').filter(Boolean);
-  const photos = profile.photos.split(',').filter(Boolean);
+  const hobbies = profile.hobbies?.split(',').filter(Boolean) || [];
+  const birthDate = profile.birthDate ? new Date(profile.birthDate).toLocaleDateString('zh-CN') : '未设置';
 
   return (
     <div className="min-h-screen bg-gray-100 py-12">
@@ -89,6 +198,17 @@ export default function Profile() {
           {/* 头部信息 */}
           <div className="bg-blue-600 px-6 py-4">
             <h1 className="text-2xl font-bold text-white">{profile.name}的个人资料</h1>
+          </div>
+
+          {/* 照片墙 */}
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">照片管理</h2>
+            <PhotoUpload
+              photos={photos}
+              onPhotoUpload={handlePhotoUpload}
+              onPhotoDelete={handlePhotoDelete}
+              onSetMainPhoto={handleSetMainPhoto}
+            />
           </div>
 
           {/* 基本信息 */}
@@ -107,9 +227,7 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">出生日期</label>
-                    <div className="mt-1 text-gray-900">
-                      {new Date(profile.birthDate).toLocaleDateString('zh-CN')}
-                    </div>
+                    <div className="mt-1 text-gray-900">{birthDate}</div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">籍贯</label>
@@ -152,11 +270,11 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">身高</label>
-                    <div className="mt-1 text-gray-900">{profile.height}cm</div>
+                    <div className="mt-1 text-gray-900">{profile.height ? `${profile.height}cm` : '未设置'}</div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">体重</label>
-                    <div className="mt-1 text-gray-900">{profile.weight}kg</div>
+                    <div className="mt-1 text-gray-900">{profile.weight ? `${profile.weight}kg` : '未设置'}</div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">性格特征</label>
@@ -204,7 +322,7 @@ export default function Profile() {
                   {photos.map((photo, index) => (
                     <div key={index} className="aspect-w-1 aspect-h-1">
                       <img
-                        src={photo}
+                        src={photo.url}
                         alt={`照片 ${index + 1}`}
                         className="object-cover rounded-lg"
                       />
@@ -213,16 +331,16 @@ export default function Profile() {
                 </div>
               </div>
             )}
+          </div>
 
-            {/* 编辑按钮 */}
-            <div className="border-t pt-6 flex justify-end">
-              <button
-                onClick={() => router.push('/profile/edit')}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                编辑资料
-              </button>
-            </div>
+          {/* 编辑按钮 */}
+          <div className="p-6 border-t flex justify-end">
+            <button
+              onClick={() => router.push('/profile/edit')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              编辑资料
+            </button>
           </div>
         </div>
       </div>

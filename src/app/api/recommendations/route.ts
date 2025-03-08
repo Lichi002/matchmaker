@@ -45,7 +45,7 @@ function calculateMatchScore(user1: any, user2: any): number {
   // 兴趣爱好匹配度
   const hobbies1 = user1.hobbies.split(',').filter(Boolean);
   const hobbies2 = user2.hobbies.split(',').filter(Boolean);
-  const commonHobbies = hobbies1.filter(h => hobbies2.includes(h));
+  const commonHobbies = hobbies1.filter((h: string) => hobbies2.includes(h));
   if (hobbies1.length && hobbies2.length) {
     score += weights.hobbies * (commonHobbies.length / Math.max(hobbies1.length, hobbies2.length));
   }
@@ -57,6 +57,9 @@ function calculateMatchScore(user1: any, user2: any): number {
 
   return score;
 }
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {

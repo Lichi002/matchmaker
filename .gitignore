@@ -31,4 +31,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts 
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma
+/prisma/*.db
+/prisma/migrations/ 

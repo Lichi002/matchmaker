@@ -14,22 +14,23 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   password      String
-  name          String
-  gender        String
-  birthDate     DateTime
+  name          String?
+  gender        String?
+  birthDate     DateTime?
   birthPlace    String
-  currentCity   String
-  education     String
+  currentCity   String?
+  education     String?
   carAndHouse   String    @default("{}")
   industry      String
-  occupation    String
-  annualIncome  String
-  height        Int
-  weight        Int
-  personality   String
-  hobbies       String    @default("")
+  occupation    String?
+  annualIncome  String?
+  height        Int?
+  weight        Int?
+  personality   String?
+  housing       String?
+  hobbies       String?
+  photos        Photo[]
   mbti          String?
-  photos        String    @default("")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   preferences   PartnerPreference?
@@ -50,4 +51,17 @@ model PartnerPreference {
   otherRequirements     String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  url       String
+  caption   String?
+  isMain    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 } 
