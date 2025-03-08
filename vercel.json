@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "NEXTAUTH_URL": "https://${VERCEL_URL}",
+    "JWT_SECRET": "${JWT_SECRET}"
+  }
+} 
